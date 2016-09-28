@@ -35,7 +35,7 @@ struct arp_header{
 	unsigned long target_ip[4];
 };
 
-char *name="enp0s3";
+char *name="enp0s8";
 int getMyIpAddress(unsigned char* ipaddress){
 	int fd,ifindex;
 	struct ifreq ifr;
@@ -144,7 +144,7 @@ int arpRequest(char *srcmac,char *myip, char *victimip, int ifindex){
                 arp_req->target_mac[i]=(unsigned char)0x00;//arp destination mac 00:00:00:00:00:00 arp reqeust통해서 알고싶음
                 send_req->h_source[i]=(unsigned char)srcmac[i];//내mac
                 arp_req->sender_mac[i]=(unsigned char)srcmac[i];//내 mac
-                socket_address.sll_addr[i]=(unsigned char)srcmac[i];//내Ip
+                socket_address.sll_addr[i]=(unsigned char)srcmac[i];
         }
        
 	socket_address.sll_family=AF_PACKET;
@@ -176,7 +176,7 @@ int arpRequest(char *srcmac,char *myip, char *victimip, int ifindex){
 	    exit(1);
 	}
 	//memset(buffer,0x00,60);
-	buffer[32]=0x00;
+	//buffer[32]=0x00;
 	//send arp request 
         ret=sendto(sd,buffer,42,0,(struct  sockaddr*)&socket_address, sizeof(socket_address));
         if(ret==-1){
@@ -185,7 +185,7 @@ int arpRequest(char *srcmac,char *myip, char *victimip, int ifindex){
         }
         else{
          	printf("Sent ARP request to %s\n", victimip);
-                for(i=0;i<42;i++){
+                for(i=0;i<200;i++){
                         printf("%02X ",buffer[i]);
                         if(i%16 ==0 && i!=0){
 				printf("\n");
@@ -203,7 +203,39 @@ int arpRequest(char *srcmac,char *myip, char *victimip, int ifindex){
 	if(htons(rcv_rply->h_proto)==PROTO_ARP){
 	*/	
 
-	
+	while(1){
+                length = recvfrom(sd, buffer, 60, 0, NULL, NULL);
+                if (length == -1)
+                {
+                        perror("recvfrom():");
+                        exit(1);
+                }
+                if(htons(rcv_rpl->h_proto) == PROTO_ARP)
+                {
+                        //if( arp_resp->opcode == ARP_REPLY )
+                        printf(" RECEIVED ARP RESP len=%d \n",length);
+                        printf(" Sender IP :");
+                        for(i=0;i<4;i++)
+                                printf("%u.",(unsigned int)arp_rpl->sender_ip[i]);
+
+                        printf("\n Sender MAC :");
+                        for(i=0;i<6;i++)
+                                printf(" %02X:",arp_rpl->sender_mac[i]);
+
+                        printf("\nReceiver  IP :");
+                        for(i=0;i<4;i++)
+                                printf(" %u.",arp_rpl->target_ip[i]);
+
+                        printf("\n Self MAC :");
+                        for(i=0;i<6;i++)
+                                printf(" %02X:",arp_rpl->target_mac[i]);
+
+                        printf("\n  :");
+
+                        break;
+                }
+        }
+
 	return 0;
 	 
 	
